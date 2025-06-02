@@ -35,22 +35,22 @@ export const sendMessage = async (message: string, sessionId: string): Promise<s
     // Verificar diferentes formatos possíveis da resposta
     if (response.data) {
       // Formato esperado: { reply: "mensagem" }
-      if (response.data.reply) {
+      if (response.data.reply && typeof response.data.reply === 'string') {
         return response.data.reply;
+      }
+
+      // Formato vindo do N8N: { output: "mensagem" }
+      if (response.data.output && typeof response.data.output === 'string') {
+        return response.data.output;
       }
       
       // Formato alternativo: { response: "mensagem" }
-      if (response.data.response) {
+      if (response.data.response && typeof response.data.response === 'string') {
         return response.data.response;
       }
       
-      // Formato alternativo: { text: "mensagem" }
-      if (response.data.text) {
-        return response.data.text;
-      }
-      
       // Formato alternativo: { message: "mensagem" }
-      if (response.data.message) {
+      if (response.data.message && typeof response.data.message === 'string') {
         return response.data.message;
       }
       
@@ -61,9 +61,9 @@ export const sendMessage = async (message: string, sessionId: string): Promise<s
       
       // Se for um objeto, mas não tem os campos esperados
       if (typeof response.data === 'object') {
-        // Tentar extrair o primeiro campo string do objeto
+        // Tentar extrair o primeiro campo string do objeto, EXCLUINDO 'output' se já foi tratado
         for (const key in response.data) {
-          if (typeof response.data[key] === 'string') {
+          if (key !== 'output' && typeof response.data[key] === 'string') {
             return response.data[key];
           }
         }
