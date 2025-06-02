@@ -1,5 +1,7 @@
+// INÍCIO DA CONFIGURAÇÃO POSTCSS
 const config = {
-  plugins: ["@tailwindcss/postcss"],
+  plugins: [],
 };
 
 export default config;
+// FIM DA CONFIGURAÇÃO POSTCSS
