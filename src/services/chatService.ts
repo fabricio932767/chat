@@ -32,48 +32,68 @@ export const sendMessage = async (message: string, sessionId: string): Promise<s
     
     console.log('Resposta recebida:', response.data);
     
-    // Verificar diferentes formatos possíveis da resposta
-    if (response.data) {
+    // Determinar o objeto de dados real, caso a resposta seja um array
+    let dataToProcess = response.data;
+    if (Array.isArray(response.data) && response.data.length > 0) {
+      dataToProcess = response.data[0];
+      console.log('Processando primeiro elemento do array de resposta:', dataToProcess);
+    } else if (Array.isArray(response.data) && response.data.length === 0) {
+      console.error('Resposta recebida é um array vazio.');
+      throw new Error('Resposta do webhook é um array vazio.');
+    }
+
+    // Verificar diferentes formatos possíveis da resposta usando dataToProcess
+    if (dataToProcess) {
       // Formato esperado: { reply: "mensagem" }
-      if (response.data.reply && typeof response.data.reply === 'string') {
-        return response.data.reply;
+      if (dataToProcess.reply && typeof dataToProcess.reply === 'string') {
+        return dataToProcess.reply;
       }
 
       // Formato vindo do N8N: { output: "mensagem" }
-      if (response.data.output && typeof response.data.output === 'string') {
-        return response.data.output;
+      if (dataToProcess.output && typeof dataToProcess.output === 'string') {
+        return dataToProcess.output;
       }
       
       // Formato alternativo: { response: "mensagem" }
-      if (response.data.response && typeof response.data.response === 'string') {
-        return response.data.response;
+      if (dataToProcess.response && typeof dataToProcess.response === 'string') {
+        return dataToProcess.response;
+      }
+      
+      // Formato alternativo: { text: "mensagem" } // Adicionando de volta para cobrir mais casos
+      if (dataToProcess.text && typeof dataToProcess.text === 'string') {
+        return dataToProcess.text;
       }
       
       // Formato alternativo: { message: "mensagem" }
-      if (response.data.message && typeof response.data.message === 'string') {
-        return response.data.message;
+      if (dataToProcess.message && typeof dataToProcess.message === 'string') {
+        return dataToProcess.message;
       }
       
-      // Se for uma string direta
-      if (typeof response.data === 'string') {
-        return response.data;
+      // Se for uma string direta (pouco provável se dataToProcess era um objeto de um array)
+      if (typeof dataToProcess === 'string') {
+        return dataToProcess;
       }
       
       // Se for um objeto, mas não tem os campos esperados
-      if (typeof response.data === 'object') {
-        // Tentar extrair o primeiro campo string do objeto, EXCLUINDO 'output' se já foi tratado
-        for (const key in response.data) {
-          if (key !== 'output' && typeof response.data[key] === 'string') {
-            return response.data[key];
+      if (typeof dataToProcess === 'object') {
+        // Tentar extrair o primeiro campo string do objeto
+        for (const key in dataToProcess) {
+          if (typeof dataToProcess[key] === 'string') {
+            // Evitar retornar chaves que não são a mensagem principal, como 'sessionId' etc.
+            // Esta heurística pode precisar de ajuste se houverem outras strings no objeto.
+            if (key !== 'output' && key !== 'reply' && key !== 'response' && key !== 'text' && key !== 'message') {
+               // Poderia adicionar uma lógica mais inteligente aqui se necessário
+            }
+            return dataToProcess[key]; 
           }
         }
         
         // Se não encontrar campo string, retornar o objeto como string
-        return JSON.stringify(response.data);
+        return JSON.stringify(dataToProcess);
       }
     }
     
-    console.error('Formato de resposta não reconhecido:', response.data);
+    console.error('Formato de resposta não reconhecido:', response.data); // Logar a resposta original
     throw new Error('Formato de resposta inválido');
   } catch (error) {
     console.error('Erro ao enviar mensagem para o webhook:', error);
