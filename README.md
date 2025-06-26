@@ -30,8 +30,47 @@ Interface de chat em tempo real para comunicação com um servidor n8n através 
    ```
 3. A URL do webhook já está configurada por padrão, mas você pode alterá-la criando um arquivo `.env.local` na raiz do projeto:
    ```
-   NEXT_PUBLIC_WEBHOOK_URL=https://n8n.afeera.com.br/webhook/expressao
+   NEXT_PUBLIC_WEBHOOK_URL=https://n8ndev.intranet.wdcnet/webhook/chat-test
    ```
+
+### Configuração SSL para Certificados Internos
+
+Para conexões com endpoints HTTPS que usam certificados internos/auto-assinados:
+
+1. **Obtenha o certificado da CA interna:**
+   - Contate o administrador de rede para obter o arquivo `rootCA.crt`
+   - Ou exporte do navegador: acesse a URL → Ver certificado → Exportar CA raiz
+
+2. **Configure o certificado:**
+   ```bash
+   # Coloque o certificado no diretório correto
+   cp rootCA.crt ./certs/rootCA.crt
+   ```
+
+3. **Teste a configuração:**
+   ```bash
+   npm run test:ssl
+   ```
+
+4. **Execute com SSL configurado:**
+   ```bash
+   # Desenvolvimento com SSL
+   npm run dev:ssl
+   
+   # Build com SSL
+   npm run build:ssl
+   
+   # Produção com SSL
+   npm run start:ssl
+   ```
+
+**Estrutura de certificados esperada:**
+```
+/certs/
+  ├── rootCA.crt        # Certificado da CA interna
+  ├── rootCA.crt.example # Arquivo de exemplo
+  └── README.md         # Instruções detalhadas
+```
 
 ## Executando o projeto
 

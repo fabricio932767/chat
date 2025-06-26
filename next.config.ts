@@ -7,7 +7,7 @@ const nextConfig = {
   experimental: {
     allowedDevOrigins: [
       'http://localhost:3000', // Acesso local
-      'http://172.19.1.56',    // IP da sua rede local (como apareceu no terminal)
+      'http://10.81.234.194/',  // IP da sua rede local (como apareceu no terminal)
     ]
   }
 };

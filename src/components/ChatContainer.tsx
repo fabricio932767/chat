@@ -2,9 +2,9 @@
 
 import MessageItem from '@/components/MessageItem';
 import { sendMessage } from '@/services/chatService';
-import { ChatSession, Message } from '@/types/chat';
+import { ChatSession, FileAttachment, Message } from '@/types/chat';
 import { addMessageToSession, clearAllSessions, getSessions, saveSession } from '@/utils/localStorage';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
 const ChatContainer = () => {
@@ -15,7 +15,12 @@ const ChatContainer = () => {
   const [inputMessage, setInputMessage] = useState<string>('');
   const [isTyping, setIsTyping] = useState(false);
   const [isDarkTheme, setIsDarkTheme] = useState(false);
+  const [pendingAttachments, setPendingAttachments] = useState<FileAttachment[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const dragCounterRef = useRef(0);
 
   // Carregar tema quando o componente montar
   useEffect(() => {
@@ -72,15 +77,120 @@ const ChatContainer = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Função para processar arquivo
+  const processFile = async (file: File): Promise<void> => {
+    console.log('processFile chamada para:', file.name); // Debug
+    setUploading(true);
+    setUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      console.log('Enviando para API...'); // Debug
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+      console.log('Resposta da API:', result); // Debug
+
+      if (result.success && result.file) {
+        console.log('Arquivo processado com sucesso, adicionando aos anexos pendentes'); // Debug
+        setPendingAttachments(prev => [...prev, result.file]);
+      } else {
+        console.error('Erro na resposta da API:', result.error); // Debug
+        setUploadError(result.error || 'Erro ao processar arquivo');
+      }
+    } catch (error) {
+      console.error('Erro no upload:', error);
+      setUploadError('Erro ao enviar arquivo. Tente novamente.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Função para remover anexo pendente
+  const removePendingAttachment = (attachmentId: string) => {
+    setPendingAttachments(prev => prev.filter(att => att.id !== attachmentId));
+  };
+
+  // Funções de drag & drop
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current++;
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current--;
+    
+    if (dragCounterRef.current === 0) {
+      setIsDragOver(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current = 0;
+    setIsDragOver(false);
+
+    console.log('Drop detectado!', e.dataTransfer.files.length); // Debug
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      const file = files[0];
+      
+      console.log('Arquivo detectado:', file.name, file.type); // Debug
+      
+      // Validar tipo de arquivo
+      const allowedTypes = [
+        'application/pdf',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/msword'
+      ];
+
+      if (!allowedTypes.includes(file.type)) {
+        setUploadError('Tipo de arquivo não suportado. Envie apenas PDF, Excel ou Word.');
+        return;
+      }
+
+      // Validar tamanho (10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setUploadError('Arquivo muito grande. Tamanho máximo: 10MB');
+        return;
+      }
+
+      console.log('Processando arquivo...'); // Debug
+      processFile(file);
+    }
+  }, []);
+
   const handleSendMessage = async (content: string) => {
-    if (!content.trim() || isLoading) return;
+    if ((!content.trim() && pendingAttachments.length === 0) || isLoading) return;
+
+    // Usar anexos pendentes para esta mensagem
+    const attachments = pendingAttachments.length > 0 ? [...pendingAttachments] : undefined;
 
     // Criar mensagem do usuário
     const userMessage: Message = {
       id: uuidv4(),
       type: 'user',
       content,
-      timestamp: new Date()
+      timestamp: new Date(),
+      attachments: attachments
     };
 
     // Adicionar mensagem do usuário ao estado
@@ -88,6 +198,9 @@ const ChatContainer = () => {
     
     // Adicionar mensagem à sessão no localStorage
     addMessageToSession(sessionId, userMessage);
+
+    // Limpar anexos pendentes após enviar
+    setPendingAttachments([]);
 
     // Mostrar indicador de carregamento
     setIsLoading(true);
@@ -98,8 +211,8 @@ const ChatContainer = () => {
       // Simular um pequeno atraso para mostrar o indicador "digitando..."
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      // Enviar mensagem para o servidor
-      const reply = await sendMessage(content, sessionId);
+      // Enviar mensagem para o servidor (incluindo anexos se existirem)
+      const reply = await sendMessage(content, sessionId, attachments);
 
       // Criar mensagem do assistente
       const assistantMessage: Message = {
@@ -169,7 +282,13 @@ const ChatContainer = () => {
 
   return (
     <div className="container-fluid">
-      <div className="chat-container">
+      <div 
+        className={`chat-container ${isDragOver ? 'drag-over' : ''}`}
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         {/* Cabeçalho do chat */}
         <div className="chat-header">
           <div className="header-avatar">
@@ -266,6 +385,49 @@ const ChatContainer = () => {
           
           {/* Área de entrada de mensagem */}
           <div className="input-area">
+            {/* Exibir anexos pendentes */}
+            {pendingAttachments.length > 0 && (
+              <div className="pending-attachments">
+                <div className="pending-attachments-header">
+                  <span>Arquivos anexados ({pendingAttachments.length}):</span>
+                </div>
+                <div className="pending-attachments-list">
+                  {pendingAttachments.map((attachment) => (
+                    <div key={attachment.id} className="pending-attachment-item">
+                      <span className="attachment-name">{attachment.name}</span>
+                      <button 
+                        onClick={() => removePendingAttachment(attachment.id)}
+                        className="remove-attachment-btn"
+                        aria-label="Remover anexo"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Indicadores de upload */}
+            {uploading && (
+              <div className="upload-indicator">
+                <div className="upload-spinner"></div>
+                <span>Processando arquivo...</span>
+              </div>
+            )}
+
+            {uploadError && (
+              <div className="upload-error">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z" />
+                </svg>
+                <span>{uploadError}</span>
+                <button onClick={() => setUploadError(null)} className="dismiss-error">×</button>
+              </div>
+            )}
+            
             <form onSubmit={handleFormSubmit} className="input-container">
               <button className="emoji-btn" type="button">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
@@ -283,7 +445,7 @@ const ChatContainer = () => {
               />
               <button 
                 type="submit" 
-                disabled={isLoading || !inputMessage.trim()} 
+                disabled={isLoading || (!inputMessage.trim() && pendingAttachments.length === 0)} 
                 className="send-btn"
                 aria-label="Enviar mensagem"
               >
@@ -294,6 +456,24 @@ const ChatContainer = () => {
             </form>
           </div>
         </div>
+
+        {/* Overlay de drag & drop */}
+        {isDragOver && (
+          <div className="drag-overlay">
+            <div className="drag-overlay-content">
+              <div className="drag-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M9,16V10H5L12,3L19,10H15V16H9M5,20V18H19V20H5Z" />
+                </svg>
+              </div>
+              <div className="drag-text">
+                <h3>Solte o arquivo aqui</h3>
+                <p>PDF, Excel (.xlsx, .xls) ou Word (.docx)</p>
+                <p>Tamanho máximo: 10MB</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -420,14 +420,12 @@ body {
   left: 0;
   right: 0;
   z-index: 10; /* Mantém acima do conteúdo */
-  height: var(--input-area-height); /* Altura fixa para a área de entrada */
   min-height: var(--input-area-height); /* Garante altura mínima fixa */
-  max-height: var(--input-area-height); /* Limita altura máxima */
   flex: 0 0 auto; /* Impede que cresça ou encolha */
   box-sizing: border-box; /* Inclui padding e borda na altura */
   display: flex;
-  align-items: center;
-  justify-content: center; /* Centraliza horizontalmente */
+  flex-direction: column;
+  gap: 0.75rem;
   margin-bottom: var(--input-bottom-margin); /* Margem inferior para evitar sobreposição com botão de Issues */
 }
 
@@ -535,5 +533,321 @@ body {
 @keyframes pulse {
   0%, 100% { transform: scale(1); opacity: 0.6; }
   50% { transform: scale(1.2); opacity: 1; }
+}
+
+/* Componente de Upload de Arquivo */
+.file-upload-container {
+  margin: 0.75rem 0;
+}
+
+.file-dropzone {
+  border: 2px dashed var(--input-border);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: var(--input-bg);
+  color: var(--text-color);
+}
+
+.file-dropzone:hover:not(.disabled) {
+  border-color: var(--main-color);
+  background-color: var(--main-bg);
+}
+
+.file-dropzone.active {
+  border-color: var(--main-color);
+  background-color: var(--main-bg);
+  border-style: solid;
+}
+
+.file-dropzone.uploading {
+  border-color: var(--main-color);
+  background-color: var(--main-bg);
+  cursor: not-allowed;
+}
+
+.file-dropzone.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.file-upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.file-upload-content p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.file-upload-content p strong {
+  color: var(--main-color);
+}
+
+.file-types {
+  color: var(--text-color);
+  opacity: 0.7;
+  font-size: 0.75rem !important;
+}
+
+.file-size {
+  color: var(--text-color);
+  opacity: 0.6;
+  font-size: 0.7rem !important;
+}
+
+.upload-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--main-color);
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.file-upload-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+  background-color: #fee2e2;
+  color: #ef4444;
+  border-radius: 0.5rem;
+  border: 1px solid #fca5a5;
+  font-size: 0.875rem;
+}
+
+[data-theme="dark"] .file-upload-error {
+  background-color: #7f1d1d;
+  color: #fecaca;
+  border-color: #b91c1c;
+}
+
+/* Estilos para anexos nas mensagens */
+.message-attachments {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--input-border);
+}
+
+[data-theme="dark"] .attachment-item {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.attachment-icon {
+  width: 1rem;
+  height: 1rem;
+  color: var(--main-color);
+  flex-shrink: 0;
+}
+
+.attachment-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.attachment-name {
+  font-weight: 500;
+  color: var(--text-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-size {
+  color: var(--text-color);
+  opacity: 0.7;
+  font-size: 0.75rem;
+}
+
+/* Anexos pendentes */
+.pending-attachments {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.pending-attachments-header {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-color);
+  margin-bottom: 0.5rem;
+}
+
+.pending-attachments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.pending-attachment-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem;
+  background-color: var(--main-bg);
+  border-radius: 0.5rem;
+  border: 1px solid var(--input-border);
+}
+
+.pending-attachment-item .attachment-name {
+  font-size: 0.875rem;
+  color: var(--text-color);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remove-attachment-btn {
+  padding: 0.25rem;
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  border-radius: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.remove-attachment-btn:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.input-container {
+  width: 100%;
+  max-width: none;
+  align-self: center;
+}
+
+/* Estilos para drag & drop integrado */
+.chat-container.drag-over {
+  border: 2px dashed var(--main-color) !important;
+  background: rgba(76, 175, 80, 0.05) !important;
+}
+
+.drag-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  border-radius: 12px;
+  backdrop-filter: blur(2px);
+}
+
+[data-theme="dark"] .drag-overlay {
+  background: rgba(23, 23, 23, 0.95);
+}
+
+.drag-overlay-content {
+  text-align: center;
+  color: var(--main-color);
+}
+
+.drag-icon {
+  margin-bottom: 16px;
+  opacity: 0.8;
+}
+
+.drag-text h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.drag-text p {
+  margin: 4px 0;
+  font-size: 14px;
+  opacity: 0.8;
+  color: var(--text-color);
+}
+
+/* Indicadores de upload */
+.upload-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(0, 123, 255, 0.1);
+  border: 1px solid rgba(0, 123, 255, 0.3);
+  border-radius: 8px;
+  color: #007bff;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+[data-theme="dark"] .upload-indicator {
+  background: rgba(0, 123, 255, 0.2);
+  border-color: rgba(0, 123, 255, 0.4);
+}
+
+.upload-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(220, 53, 69, 0.1);
+  border: 1px solid rgba(220, 53, 69, 0.3);
+  border-radius: 8px;
+  color: #dc3545;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+[data-theme="dark"] .upload-error {
+  background: rgba(220, 53, 69, 0.2);
+  border-color: rgba(220, 53, 69, 0.4);
+}
+
+.dismiss-error {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  margin-left: auto;
+  opacity: 0.7;
+}
+
+.dismiss-error:hover {
+  opacity: 1;
 }
 /* FIM DO CSS */

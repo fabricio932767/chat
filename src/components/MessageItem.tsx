@@ -1,6 +1,7 @@
 "use client";
 
 import { Message } from '@/types/chat';
+import MessageAttachments from './MessageAttachments';
 
 interface MessageItemProps {
   message: Message;
@@ -22,7 +23,15 @@ const MessageItem = ({ message }: MessageItemProps) => {
       
       {/* Conteúdo da mensagem */}
       <div className={`message-bubble ${isUser ? 'bubble-user' : 'bubble-assistant'}`}>
-        {message.content}
+        {/* Anexos (se existirem) */}
+        {message.attachments && message.attachments.length > 0 && (
+          <MessageAttachments attachments={message.attachments} />
+        )}
+        
+        {/* Conteúdo de texto */}
+        {message.content && (
+          <div>{message.content}</div>
+        )}
       </div>
       
       {/* Avatar para mensagens do usuário */}
