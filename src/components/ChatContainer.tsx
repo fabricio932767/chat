@@ -22,6 +22,7 @@ const ChatContainer = () => {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const dragCounterRef = useRef(0);
+  const inputRef = useRef<HTMLInputElement>(null); // Ref para o input
 
   // Carregar tema quando o componente montar
   useEffect(() => {
@@ -73,6 +74,16 @@ const ChatContainer = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Focar no input quando o componente montar
+  useEffect(() => {
+    // Aguardar um pouco para garantir que o componente esteja totalmente renderizado
+    const timer = setTimeout(() => {
+      focusInput();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -294,19 +305,8 @@ const ChatContainer = () => {
     if ((inputMessage.trim() || pendingAttachments.length > 0) && !isLoading) {
       handleSendMessage(inputMessage);
       setInputMessage('');
-      // Focar no input após enviar com múltiplas tentativas
-      setTimeout(() => {
-        const input = document.querySelector('.chat-input') as HTMLInputElement;
-        if (input) {
-          input.focus();
-        }
-      }, 50);
-      setTimeout(() => {
-        const input = document.querySelector('.chat-input') as HTMLInputElement;
-        if (input && document.activeElement !== input) {
-          input.focus();
-        }
-      }, 200);
+      // Focar no input após enviar usando a função robusta
+      focusInput();
     }
   };
 
@@ -315,19 +315,40 @@ const ChatContainer = () => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       if ((inputMessage.trim() || pendingAttachments.length > 0) && !isLoading) {
-        const inputElement = e.target as HTMLInputElement;
         handleSendMessage(inputMessage);
         setInputMessage('');
-        // Focar no input após enviar com múltiplas tentativas
-        setTimeout(() => {
-          inputElement.focus();
-        }, 50);
-        setTimeout(() => {
-          if (document.activeElement !== inputElement) {
-            inputElement.focus();
-          }
-        }, 200);
+        // Focar no input após enviar usando a função robusta
+        focusInput();
       }
+    }
+  };
+
+  // Função para focar no input de forma robusta
+  const focusInput = () => {
+    if (inputRef.current && !isLoading) {
+      // Garantir que o input não está desabilitado
+      inputRef.current.disabled = false;
+      
+      // Múltiplas tentativas para garantir o foco
+      const tryFocus = () => {
+        if (inputRef.current && document.activeElement !== inputRef.current) {
+          inputRef.current.focus();
+          // Mover cursor para o final do texto (se houver)
+          const length = inputRef.current.value.length;
+          inputRef.current.setSelectionRange(length, length);
+        }
+      };
+
+      // Tentativas imediatas e com delays
+      tryFocus();
+      
+      setTimeout(tryFocus, 10);
+      setTimeout(tryFocus, 50);
+      setTimeout(tryFocus, 100);
+      setTimeout(tryFocus, 200);
+      
+      // Tentativa final após animações
+      setTimeout(tryFocus, 500);
     }
   };
 
@@ -466,6 +487,7 @@ const ChatContainer = () => {
             
             <form onSubmit={handleFormSubmit} className="input-container">
               <input
+                ref={inputRef}
                 type="text"
                 placeholder="Digite sua mensagem..."
                 className="chat-input"
@@ -473,6 +495,7 @@ const ChatContainer = () => {
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyDown={handleInputKeyDown}
                 disabled={isLoading}
+                autoFocus
               />
               
               {/* Botão para anexar arquivo */}
