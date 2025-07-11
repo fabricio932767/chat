@@ -1,6 +1,4 @@
-import 'bootstrap/dist/css/bootstrap.min.css';
 import type { Metadata } from 'next';
-import { BootstrapClient } from './bootstrap-client';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -16,7 +14,6 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className="chat-page-body">
-        <BootstrapClient />
         {children}
       </body>
     </html>

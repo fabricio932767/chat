@@ -86,8 +86,12 @@ O aplicativo estará disponível em [http://localhost:3000](http://localhost:300
 
 Para mais informações sobre o projeto, consulte a documentação na pasta `docs/`:
 
-- [Solução de Problemas](docs/TROUBLESHOOTING.md) - Guia de solução de problemas comuns
-- [Integração com N8N](docs/INTEGRATION.md) - Detalhes sobre a integração com o webhook do n8n
+- [Como Iniciar](docs/COMO_INICIAR.md) - Guia rápido para começar
+- [Estrutura do Projeto](docs/ESTRUTURA_PROJETO.md) - Arquitetura e organização do código
+- [Script de Otimização](docs/SCRIPT_OTIMIZACAO.md) - Detalhes das otimizações implementadas
+- [Modificações](docs/MODIFICACOES.md) - Histórico de mudanças
+- [Responsabilidades](docs/RESPONSABILIDADES.md) - Responsabilidades dos componentes
+- [Tecnologias](docs/TECNOLOGIAS.md) - Stack tecnológica utilizada
 
 ## Estrutura do projeto
 

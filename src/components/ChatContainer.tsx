@@ -75,6 +75,32 @@ const ChatContainer = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Função para focar no input de forma robusta
+  const focusInput = useCallback(() => {
+    if (inputRef.current) {
+      // Múltiplas tentativas para garantir o foco
+      const tryFocus = () => {
+        if (inputRef.current && document.activeElement !== inputRef.current) {
+          inputRef.current.focus();
+          // Mover cursor para o final do texto (se houver)
+          const length = inputRef.current.value.length;
+          inputRef.current.setSelectionRange(length, length);
+        }
+      };
+
+      // Tentativas imediatas e com delays
+      tryFocus();
+      
+      setTimeout(tryFocus, 10);
+      setTimeout(tryFocus, 50);
+      setTimeout(tryFocus, 100);
+      setTimeout(tryFocus, 200);
+      
+      // Tentativa final após animações
+      setTimeout(tryFocus, 500);
+    }
+  }, []);
+
   // Focar no input quando o componente montar
   useEffect(() => {
     // Aguardar um pouco para garantir que o componente esteja totalmente renderizado
@@ -83,7 +109,19 @@ const ChatContainer = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [focusInput]);
+
+  // Focar no input quando o loading terminar
+  useEffect(() => {
+    if (!isLoading) {
+      // Aguardar um pouco para garantir que as animações terminem
+      const timer = setTimeout(() => {
+        focusInput();
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, focusInput]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -273,6 +311,11 @@ const ChatContainer = () => {
     } finally {
       setIsTyping(false);
       setIsLoading(false);
+      
+      // Garantir que o foco retorne ao input após o envio
+      setTimeout(() => {
+        focusInput();
+      }, 100);
     }
   };
 
@@ -320,35 +363,6 @@ const ChatContainer = () => {
         // Focar no input após enviar usando a função robusta
         focusInput();
       }
-    }
-  };
-
-  // Função para focar no input de forma robusta
-  const focusInput = () => {
-    if (inputRef.current && !isLoading) {
-      // Garantir que o input não está desabilitado
-      inputRef.current.disabled = false;
-      
-      // Múltiplas tentativas para garantir o foco
-      const tryFocus = () => {
-        if (inputRef.current && document.activeElement !== inputRef.current) {
-          inputRef.current.focus();
-          // Mover cursor para o final do texto (se houver)
-          const length = inputRef.current.value.length;
-          inputRef.current.setSelectionRange(length, length);
-        }
-      };
-
-      // Tentativas imediatas e com delays
-      tryFocus();
-      
-      setTimeout(tryFocus, 10);
-      setTimeout(tryFocus, 50);
-      setTimeout(tryFocus, 100);
-      setTimeout(tryFocus, 200);
-      
-      // Tentativa final após animações
-      setTimeout(tryFocus, 500);
     }
   };
 
