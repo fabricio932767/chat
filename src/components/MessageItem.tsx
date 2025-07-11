@@ -2,6 +2,8 @@
 
 import { Message } from '@/types/chat';
 import MessageAttachments from './MessageAttachments';
+import MarkdownRenderer from './MarkdownRenderer';
+import { useEffect, useState } from 'react';
 
 interface MessageItemProps {
   message: Message;
@@ -9,6 +11,34 @@ interface MessageItemProps {
 
 const MessageItem = ({ message }: MessageItemProps) => {
   const isUser = message.type === 'user';
+  const [isDarkTheme, setIsDarkTheme] = useState(false);
+
+  // Detectar tema atual baseado no atributo data-theme do documento
+  useEffect(() => {
+    const checkTheme = () => {
+      const theme = document.documentElement.getAttribute('data-theme');
+      setIsDarkTheme(theme === 'dark');
+    };
+
+    // Verificar tema inicial
+    checkTheme();
+
+    // Observar mudanças no tema
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+          checkTheme();
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme']
+    });
+
+    return () => observer.disconnect();
+  }, []);
   
   return (
     <div className={`message-item ${isUser ? 'message-user' : 'message-assistant'}`}>
@@ -28,9 +58,12 @@ const MessageItem = ({ message }: MessageItemProps) => {
           <MessageAttachments attachments={message.attachments} />
         )}
         
-        {/* Conteúdo de texto */}
+        {/* Conteúdo de texto com suporte a markdown */}
         {message.content && (
-          <div>{message.content}</div>
+          <MarkdownRenderer 
+            content={message.content} 
+            isDarkTheme={isDarkTheme}
+          />
         )}
       </div>
       

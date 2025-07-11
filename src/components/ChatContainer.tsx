@@ -1,5 +1,6 @@
 "use client";
 
+import ChatHeader from '@/components/ChatHeader';
 import MessageItem from '@/components/MessageItem';
 import { sendMessage } from '@/services/chatService';
 import { ChatSession, FileAttachment, Message } from '@/types/chat';
@@ -153,23 +154,50 @@ const ChatContainer = () => {
       
       console.log('Arquivo detectado:', file.name, file.type); // Debug
       
-      // Validar tipo de arquivo
+      // Validar tipo de arquivo - expandido para incluir mais formatos
       const allowedTypes = [
+        // PDFs
         'application/pdf',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/msword'
+        // Word
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+        'application/msword', // .doc
+        // Excel
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+        'application/vnd.ms-excel', // .xls
+        // Texto
+        'text/plain', // .txt
+        'text/csv', // .csv
+        // RTF
+        'application/rtf', // .rtf
+        'text/rtf', // .rtf (alternativo)
+        // PowerPoint
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
+        'application/vnd.ms-powerpoint', // .ppt
+        // Imagens
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/bmp',
+        'image/tiff'
       ];
 
-      if (!allowedTypes.includes(file.type)) {
-        setUploadError('Tipo de arquivo não suportado. Envie apenas PDF, Excel ou Word.');
+      // Verificação flexível baseada na extensão
+      const fileName = file.name.toLowerCase();
+      const allowedExtensions = [
+        '.pdf', '.docx', '.doc', '.xlsx', '.xls', '.txt', '.csv', '.rtf', 
+        '.pptx', '.ppt', '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff'
+      ];
+      
+      const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+
+      if (!allowedTypes.includes(file.type) && !hasValidExtension) {
+        setUploadError('Tipo de arquivo não suportado. Envie: PDF, Word, Excel, PowerPoint, TXT, CSV, RTF ou imagens.');
         return;
       }
 
-      // Validar tamanho (10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        setUploadError('Arquivo muito grande. Tamanho máximo: 10MB');
+      // Validar tamanho (50MB - atualizado para suportar documentos maiores)
+      if (file.size > 50 * 1024 * 1024) {
+        setUploadError('Arquivo muito grande. Tamanho máximo: 50MB');
         return;
       }
 
@@ -263,9 +291,22 @@ const ChatContainer = () => {
   // Enviar mensagem quando o botão for clicado
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (inputMessage.trim() && !isLoading) {
+    if ((inputMessage.trim() || pendingAttachments.length > 0) && !isLoading) {
       handleSendMessage(inputMessage);
       setInputMessage('');
+      // Focar no input após enviar com múltiplas tentativas
+      setTimeout(() => {
+        const input = document.querySelector('.chat-input') as HTMLInputElement;
+        if (input) {
+          input.focus();
+        }
+      }, 50);
+      setTimeout(() => {
+        const input = document.querySelector('.chat-input') as HTMLInputElement;
+        if (input && document.activeElement !== input) {
+          input.focus();
+        }
+      }, 200);
     }
   };
 
@@ -273,9 +314,19 @@ const ChatContainer = () => {
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (inputMessage.trim() && !isLoading) {
+      if ((inputMessage.trim() || pendingAttachments.length > 0) && !isLoading) {
+        const inputElement = e.target as HTMLInputElement;
         handleSendMessage(inputMessage);
         setInputMessage('');
+        // Focar no input após enviar com múltiplas tentativas
+        setTimeout(() => {
+          inputElement.focus();
+        }, 50);
+        setTimeout(() => {
+          if (document.activeElement !== inputElement) {
+            inputElement.focus();
+          }
+        }, 200);
       }
     }
   };
@@ -289,44 +340,13 @@ const ChatContainer = () => {
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        {/* Cabeçalho do chat */}
-        <div className="chat-header">
-          <div className="header-avatar">
-            {/* Avatar do assistente vazio */}
-          </div>
-          <div className="header-info">
-            <div className="header-title">Atendimento Virtual</div>
-            <div className="header-status">
-              {isTyping ? 'Digitando...' : 'Online'}
-            </div>
-          </div>
-          <div className="header-actions">
-            {/* Botão para alternar o tema */}
-            <button 
-              onClick={toggleTheme}
-              className="theme-toggle-btn"
-              aria-label={isDarkTheme ? "Modo Claro" : "Modo Escuro"}
-            >
-              {isDarkTheme ? (
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-sun" viewBox="0 0 16 16">
-                  <path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z"/>
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-moon" viewBox="0 0 16 16">
-                  <path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278zM4.858 1.311A7.269 7.269 0 0 0 1.025 7.71c0 4.02 3.279 7.276 7.319 7.276a7.316 7.316 0 0 0 5.205-2.162c-.337.042-.68.063-1.029.063-4.61 0-8.343-3.714-8.343-8.29 0-1.167.242-2.278.681-3.286z"/>
-                </svg>
-              )}
-            </button>
-            
-            <button 
-              onClick={clearChat}
-              className="new-chat-btn"
-              aria-label="Nova conversa"
-            >
-              Novo chat
-            </button>
-          </div>
-        </div>
+        {/* Cabeçalho do chat - componente modular */}
+        <ChatHeader 
+          isDarkTheme={isDarkTheme}
+          isTyping={isTyping}
+          onToggleTheme={toggleTheme}
+          onClearChat={clearChat}
+        />
         
         {/* Content Area - Container com tamanho fixo */}
         <div className="content-area">
@@ -428,12 +448,23 @@ const ChatContainer = () => {
               </div>
             )}
             
+            {/* Input hidden para upload */}
+            <input
+              id="file-input"
+              type="file"
+              accept=".pdf,.docx,.doc,.xlsx,.xls,.txt,.csv,.rtf,.pptx,.ppt,.jpg,.jpeg,.png,.gif,.bmp,.tiff"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  processFile(file);
+                }
+                // Limpar o input para permitir upload do mesmo arquivo novamente
+                e.target.value = '';
+              }}
+            />
+            
             <form onSubmit={handleFormSubmit} className="input-container">
-              <button className="emoji-btn" type="button">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-                  <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-2.625 6c-.54 0-.828.419-.936.634a1.96 1.96 0 00-.189.866c0 .298.059.605.189.866.108.215.395.634.936.634.54 0 .828-.419.936-.634.13-.26.189-.568.189-.866 0-.298-.059-.605-.189-.866-.108-.215-.395-.634-.936-.634zm4.314.634c.108-.215.395-.634.936-.634.54 0 .828.419.936.634.13.26.189.568.189.866 0 .298-.059.605-.189.866-.108.215-.395.634-.936.634-.54 0-.828-.419-.936-.634a1.96 1.96 0 01-.189-.866c0-.298.059-.605.189-.866zm-4.34 7.964a.75.75 0 01-1.061-1.06 5.236 5.236 0 013.73-1.538 5.236 5.236 0 013.695 1.538.75.75 0 11-1.061 1.06 3.736 3.736 0 00-2.639-1.098 3.736 3.736 0 00-2.664 1.098z" clipRule="evenodd" />
-                </svg>
-              </button>
               <input
                 type="text"
                 placeholder="Digite sua mensagem..."
@@ -443,6 +474,25 @@ const ChatContainer = () => {
                 onKeyDown={handleInputKeyDown}
                 disabled={isLoading}
               />
+              
+              {/* Botão para anexar arquivo */}
+              <button 
+                type="button"
+                onClick={() => {
+                  const fileInput = document.getElementById('file-input');
+                  if (fileInput) {
+                    fileInput.click();
+                  }
+                }}
+                className="attachment-btn"
+                aria-label="Anexar arquivo"
+                title="Anexar arquivo (PDF, Word, Excel, TXT, CSV, RTF, PowerPoint, Imagens)"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" />
+                </svg>
+              </button>
+              
               <button 
                 type="submit" 
                 disabled={isLoading || (!inputMessage.trim() && pendingAttachments.length === 0)} 
@@ -468,8 +518,8 @@ const ChatContainer = () => {
               </div>
               <div className="drag-text">
                 <h3>Solte o arquivo aqui</h3>
-                <p>PDF, Excel (.xlsx, .xls) ou Word (.docx)</p>
-                <p>Tamanho máximo: 10MB</p>
+                <p>PDF, Word, Excel, TXT, CSV, RTF, PowerPoint, Imagens</p>
+                <p>Tamanho máximo: 50MB</p>
               </div>
             </div>
           </div>
